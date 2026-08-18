@@ -3,7 +3,9 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
-  // Required for GitHub Pages, which serves the app from
-  // https://<user>.github.io/chromatic-invoice/ rather than the domain root.
-  base: "/chromatic-invoice/",
+  // Root-relative base — correct for Vercel (serves from the domain root)
+  // and for GitHub Pages via a custom/project domain. If you ever deploy
+  // to https://<user>.github.io/chromatic-invoice/ specifically (a path,
+  // not a root domain), that build needs base: "/chromatic-invoice/" instead.
+  base: "/",
 });
