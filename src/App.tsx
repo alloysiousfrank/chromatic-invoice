@@ -7,6 +7,7 @@ import InvoicePreview from "./components/InvoicePreview";
 import { emptyCustomer, emptyProduct, emptyService } from "./types";
 import type { InvoiceData } from "./types";
 import { saveInvoiceRecord, exportRecordsToExcel, getAllRecords } from "./utils/invoiceStore";
+import { generateInvoiceNumber } from "./utils/invoiceNumber";
 
 function InvoiceApp() {
   const [customer, setCustomer] = useState(emptyCustomer);
@@ -16,7 +17,10 @@ function InvoiceApp() {
   const [recordCount, setRecordCount] = useState(() => getAllRecords().length);
 
   const handleGenerate = () => {
-    const data: InvoiceData = { customer, product, service };
+    const invoiceNumber = generateInvoiceNumber();
+    const finalService = { ...service, invoiceNumber };
+    const data: InvoiceData = { customer, product, service: finalService };
+    setService(finalService);
     setInvoice(data);
     saveInvoiceRecord(data);
     setRecordCount(getAllRecords().length);

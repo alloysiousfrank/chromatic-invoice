@@ -1,8 +1,17 @@
 import { useEffect, useState } from "react";
 import { LOGO_BASE64 } from "../assets/logo";
+import { calcGrandTotal } from "../types";
 import type { InvoiceData } from "../types";
 import { downloadInvoicePdf } from "../utils/generateInvoicePdf";
 import { generateUpiQrDataUrl } from "../utils/qrCode";
+import {
+  BUSINESS_NAME,
+  BUSINESS_TAGLINE,
+  BUSINESS_ADDRESS,
+  BUSINESS_CONTACT,
+  BUSINESS_EMAIL,
+  WARRANTY_NOTE,
+} from "../config/businessConfig";
 
 interface Props {
   data: InvoiceData;
@@ -13,11 +22,14 @@ export default function InvoicePreview({ data }: Props) {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
 
-  const amountStr = parseFloat(service.amount || "0").toFixed(2);
+  const grandTotal = calcGrandTotal(service);
+  const grandTotalStr = grandTotal.toFixed(2);
+  const partsCost = (parseFloat(service.sparePartsCost || "0") || 0).toFixed(2);
+  const serviceChargeStr = (parseFloat(service.serviceCharge || "0") || 0).toFixed(2);
 
   useEffect(() => {
     let cancelled = false;
-    generateUpiQrDataUrl(amountStr, `Chromatic Point - ${customer.name || "Invoice"}`)
+    generateUpiQrDataUrl(grandTotalStr, `${BUSINESS_NAME} - ${customer.name || "Invoice"}`)
       .then((url) => {
         if (!cancelled) setQrDataUrl(url);
       })
@@ -28,7 +40,7 @@ export default function InvoicePreview({ data }: Props) {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [amountStr, customer.name]);
+  }, [grandTotalStr, customer.name]);
 
   const dateStr = service.invoiceDate
     ? new Date(service.invoiceDate).toLocaleDateString("en-GB")
@@ -54,40 +66,38 @@ export default function InvoicePreview({ data }: Props) {
       </div>
 
       <div className="invoice-sheet">
-        <div className="invoice-header">
+        <div className="invoice-band">
           <img src={LOGO_BASE64} alt="Chromatic Point logo" className="invoice-logo" />
           <div className="invoice-identity">
-            <h3>CHROMATIC POINT</h3>
-            <p>Music Instrument Service Center</p>
-            <p>15 Velampalayam, Tiruppur - 641652</p>
-            <p>Contact: 8056371576 &nbsp;|&nbsp; jewtirupur@gmail.com</p>
+            <h3>{BUSINESS_NAME}</h3>
+            <p className="tagline">{BUSINESS_TAGLINE}</p>
+            <p>{BUSINESS_ADDRESS}</p>
+            <p>Contact: {BUSINESS_CONTACT} &nbsp;|&nbsp; {BUSINESS_EMAIL}</p>
           </div>
-          <div className="invoice-date">Date: {dateStr}</div>
+          <div className="invoice-meta">
+            <div className="invoice-number">{service.invoiceNumber || "INVOICE"}</div>
+            <div className="invoice-date">Date: {dateStr}</div>
+          </div>
         </div>
 
+        <h4 className="section-label">Customer Details</h4>
         <table className="invoice-table">
           <tbody>
             <tr>
               <th>Name</th>
               <td>{or(customer.name)}</td>
-              <th>Landline No</th>
-              <td>{or(customer.landline)}</td>
-            </tr>
-            <tr>
               <th>Contact No</th>
               <td>{or(customer.contact)}</td>
-              <th>Email</th>
-              <td>{or(customer.email)}</td>
             </tr>
             <tr>
               <th>Address</th>
               <td>{or(customer.address)}</td>
-              <th>City</th>
-              <td>{or(customer.city)}</td>
+              <th>City / State</th>
+              <td>{or(customer.city)} / {or(customer.state)}</td>
             </tr>
             <tr>
-              <th>State</th>
-              <td>{or(customer.state)}</td>
+              <th>Email</th>
+              <td>{or(customer.email)}</td>
               <th>Pincode</th>
               <td>{or(customer.pincode)}</td>
             </tr>
@@ -98,37 +108,52 @@ export default function InvoicePreview({ data }: Props) {
         <table className="invoice-table">
           <tbody>
             <tr>
-              <th>Product Category</th>
-              <td>{or(product.productCategory)}</td>
+              <th>Brand</th>
+              <td>{or(product.brand)}</td>
               <th>Sub-Category</th>
               <td>{or(product.productSubCategory)}</td>
             </tr>
             <tr>
-              <th>Brand</th>
-              <td>{or(product.brand)}</td>
               <th>Model Number</th>
               <td>{or(product.modelNumber)}</td>
-            </tr>
-            <tr>
               <th>Serial Number</th>
               <td>{or(product.serialNumber)}</td>
-              <th>Repair Type</th>
-              <td>{or(product.repairType)}</td>
             </tr>
             <tr>
+              <th>Repair Type</th>
+              <td>{or(product.repairType)}</td>
               <th>Service Type</th>
               <td>{or(product.serviceType)}</td>
+            </tr>
+            <tr>
               <th>Accessories</th>
-              <td>{or(product.accessories)}</td>
+              <td colSpan={3}>{or(product.accessories)}</td>
             </tr>
           </tbody>
         </table>
 
-        <h4 className="section-label">Product Condition</h4>
+        <h4 className="section-label">Condition &amp; Diagnosis</h4>
         <p className="condition-box">{or(service.condition)}</p>
-
         <p className="diagnosis"><strong>Problem Diagnosed:</strong> {or(service.problemDiagnosed)}</p>
-        <p className="amount"><strong>Amount:</strong> ₹ {amountStr}</p>
+        <p className="diagnosis"><strong>Spare Parts Changed:</strong> {or(service.sparePartsChanged)}</p>
+
+        <h4 className="section-label">Charges</h4>
+        <table className="charges-table">
+          <tbody>
+            <tr>
+              <td>Spare Parts Cost</td>
+              <td className="right">₹ {partsCost}</td>
+            </tr>
+            <tr>
+              <td>Service Charge</td>
+              <td className="right">₹ {serviceChargeStr}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div className="grand-total-bar">
+          <span>GRAND TOTAL</span>
+          <strong>₹ {grandTotalStr}</strong>
+        </div>
 
         <div className="qr-block">
           {qrDataUrl ? (
@@ -136,13 +161,19 @@ export default function InvoicePreview({ data }: Props) {
           ) : (
             <div className="qr-image qr-placeholder">QR</div>
           )}
-          <span className="qr-caption">Scan to pay (UPI)</span>
+          <div>
+            <span className="qr-caption qr-caption-strong">Scan to Pay (UPI)</span>
+            <br />
+            <span className="qr-caption">Any UPI app — GPay, PhonePe, Paytm</span>
+          </div>
         </div>
 
         <div className="signatures">
           <div className="sig-line">Customer&apos;s Signature</div>
           <div className="sig-line">Receiver&apos;s Signature</div>
         </div>
+
+        <p className="warranty-note">{WARRANTY_NOTE}</p>
       </div>
     </section>
   );

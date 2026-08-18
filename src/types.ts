@@ -23,8 +23,11 @@ export interface ProductDetails {
 export interface ServiceDetails {
   condition: string;
   problemDiagnosed: string;
-  amount: string;
+  sparePartsChanged: string;
+  sparePartsCost: string;
+  serviceCharge: string;
   invoiceDate: string;
+  invoiceNumber: string;
 }
 
 export interface InvoiceData {
@@ -58,6 +61,16 @@ export const emptyProduct: ProductDetails = {
 export const emptyService: ServiceDetails = {
   condition: "",
   problemDiagnosed: "",
-  amount: "",
+  sparePartsChanged: "",
+  sparePartsCost: "",
+  serviceCharge: "",
   invoiceDate: new Date().toISOString().slice(0, 10),
+  invoiceNumber: "",
 };
+
+/** Grand Total = spare parts cost + service charge. Computed, never stored redundantly. */
+export function calcGrandTotal(service: ServiceDetails): number {
+  const parts = parseFloat(service.sparePartsCost || "0") || 0;
+  const charge = parseFloat(service.serviceCharge || "0") || 0;
+  return parts + charge;
+}
