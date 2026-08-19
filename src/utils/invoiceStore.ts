@@ -1,6 +1,7 @@
 import * as XLSX from "xlsx";
 import { calcGrandTotal } from "../types";
 import type { InvoiceData } from "../types";
+import { getBrandDisplayLabel } from "../data/brandFields";
 
 const STORAGE_KEY = "cp_invoice_records";
 
@@ -28,7 +29,7 @@ function toRecord(data: InvoiceData): InvoiceRecord {
     invoiceNumber: data.service.invoiceNumber,
     customerName: data.customer.name,
     contact: data.customer.contact,
-    brand: data.product.brand,
+    brand: getBrandDisplayLabel(data.product.brand, data.product.customBrandName),
     modelNumber: data.product.modelNumber,
     serialNumber: data.product.serialNumber,
     repairType: data.product.repairType,

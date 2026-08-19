@@ -137,6 +137,28 @@ textarea {
   margin: 4px 0 0;
 }
 
+/* Free-text box shown when an admin picks "Others" in a dropdown */
+.other-input {
+  margin-top: 6px;
+  animation: reveal 0.15s ease-out;
+}
+
+.link-btn {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.link-btn:hover {
+  text-decoration: underline;
+}
+
 .hint.center {
   text-align: center;
 }

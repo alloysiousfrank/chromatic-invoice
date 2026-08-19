@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { LOGO_BASE64 } from "../assets/logo";
 import { calcGrandTotal } from "../types";
 import type { InvoiceData } from "../types";
+import { getBrandDisplayLabel } from "../data/brandFields";
 import { downloadInvoicePdf } from "../utils/generateInvoicePdf";
 import { generateUpiQrDataUrl } from "../utils/qrCode";
 import {
@@ -109,7 +110,7 @@ export default function InvoicePreview({ data }: Props) {
           <tbody>
             <tr>
               <th>Brand</th>
-              <td>{or(product.brand)}</td>
+              <td>{or(getBrandDisplayLabel(product.brand, product.customBrandName))}</td>
               <th>Sub-Category</th>
               <td>{or(product.productSubCategory)}</td>
             </tr>

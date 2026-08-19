@@ -4,6 +4,7 @@ import { LOGO_BASE64 } from "../assets/logo";
 import { generateUpiQrDataUrl } from "./qrCode";
 import { calcGrandTotal } from "../types";
 import type { InvoiceData } from "../types";
+import { getBrandDisplayLabel } from "../data/brandFields";
 import {
   BUSINESS_NAME,
   BUSINESS_TAGLINE,
@@ -132,7 +133,7 @@ export async function buildInvoicePdf(data: InvoiceData): Promise<jsPDF> {
     body: [
       [
         { content: "Brand", styles: { fontStyle: "bold", fillColor: PANEL } },
-        or(product.brand),
+        or(getBrandDisplayLabel(product.brand, product.customBrandName)),
         { content: "Sub-Category", styles: { fontStyle: "bold", fillColor: PANEL } },
         or(product.productSubCategory),
       ],

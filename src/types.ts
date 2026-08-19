@@ -11,6 +11,7 @@ export interface CustomerDetails {
 
 export interface ProductDetails {
   brand: string;
+  customBrandName: string;
   productCategory: string;
   productSubCategory: string;
   modelNumber: string;
@@ -49,6 +50,7 @@ export const emptyCustomer: CustomerDetails = {
 
 export const emptyProduct: ProductDetails = {
   brand: "",
+  customBrandName: "",
   productCategory: "Musical Instruments",
   productSubCategory: "",
   modelNumber: "",
