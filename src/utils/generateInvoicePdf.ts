@@ -116,7 +116,7 @@ export async function buildInvoicePdf(data: InvoiceData): Promise<jsPDF> {
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  y = (doc as any).lastAutoTable.finalY + 22;
+  y = (doc as any).lastAutoTable.finalY + 13;
 
   // --- Product details ---
   doc.setFont("helvetica", "bold");
@@ -159,7 +159,7 @@ export async function buildInvoicePdf(data: InvoiceData): Promise<jsPDF> {
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  y = (doc as any).lastAutoTable.finalY + 22;
+  y = (doc as any).lastAutoTable.finalY + 13;
 
   // --- Condition + diagnosis ---
   doc.setFont("helvetica", "bold");
@@ -181,7 +181,7 @@ export async function buildInvoicePdf(data: InvoiceData): Promise<jsPDF> {
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  y = (doc as any).lastAutoTable.finalY + 22;
+  y = (doc as any).lastAutoTable.finalY + 13;
 
   // --- Charges + Grand Total ---
   doc.setFont("helvetica", "bold");
@@ -230,31 +230,34 @@ export async function buildInvoicePdf(data: InvoiceData): Promise<jsPDF> {
   y += totalBarHeight + 4;
 
   // Advance Paid / Balance Due — only shown when an advance was actually recorded.
+  // Kept compact (smaller bars, tighter gaps) so adding them never pushes
+  // the fixed-position signature block below into overlapping territory.
   if (hasAdvance) {
-    const smallBarHeight = 26;
+    const smallBarHeight = 22;
+    const balanceBarHeight = 28;
     const ADVANCE_RED: [number, number, number] = [161, 61, 61];
     const BALANCE_GREEN: [number, number, number] = [41, 113, 63];
 
     doc.setFillColor(...ADVANCE_RED);
     doc.rect(margin, y, pageWidth - margin * 2, smallBarHeight, "F");
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
+    doc.setFontSize(9.5);
     doc.setTextColor(...WHITE);
     doc.text("ADVANCE PAID", margin + 14, y + smallBarHeight / 2 + 3.5);
     doc.text("- Rs. " + advance.toFixed(2), pageWidth - margin - 14, y + smallBarHeight / 2 + 3.5, { align: "right" });
-    y += smallBarHeight + 4;
+    y += smallBarHeight + 2;
 
     doc.setFillColor(...BALANCE_GREEN);
-    doc.rect(margin, y, pageWidth - margin * 2, totalBarHeight, "F");
+    doc.rect(margin, y, pageWidth - margin * 2, balanceBarHeight, "F");
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
+    doc.setFontSize(11.5);
     doc.setTextColor(...WHITE);
-    doc.text("BALANCE DUE", margin + 14, y + totalBarHeight / 2 + 4);
-    doc.text("Rs. " + balanceDue.toFixed(2), pageWidth - margin - 14, y + totalBarHeight / 2 + 4, { align: "right" });
-    y += totalBarHeight;
+    doc.text("BALANCE DUE", margin + 14, y + balanceBarHeight / 2 + 4);
+    doc.text("Rs. " + balanceDue.toFixed(2), pageWidth - margin - 14, y + balanceBarHeight / 2 + 4, { align: "right" });
+    y += balanceBarHeight;
   }
 
-  y += 24;
+  y += 12;
 
   // --- QR code ---
   const qrTop = y;
@@ -272,18 +275,32 @@ export async function buildInvoicePdf(data: InvoiceData): Promise<jsPDF> {
     doc.setFontSize(8);
     doc.setTextColor(...SLATE);
     doc.text("Any UPI app — GPay, PhonePe, Paytm", margin + qrSize + 24, qrTop + 44);
-    y = qrTop + qrSize + 12 + 20;
+    y = qrTop + qrSize + 12 + 6;
   } catch {
     y += 16;
   }
 
   // --- Signatures ---
+  // Fixed distance from the bottom of the page — identical on every
+  // invoice regardless of how tall the content above it is (with or
+  // without the advance/balance bars). This keeps the signature block,
+  // its lines, and the footer note perfectly consistent across all
+  // invoices instead of drifting based on content length.
   const sigLineWidth = 160;
   const sigImgWidth = 120;
   const sigImgHeight = sigImgWidth / 2.49;
-  // Reserve room above the line for the signature image so it never
-  // overlaps whatever content (QR code, charges, etc.) sits above it.
-  const sigY = Math.max(y + 30 + sigImgHeight + 4, pageHeight - 120);
+  let sigY = pageHeight - 120;
+
+  // Safety net: if unusually long content (e.g. a very long diagnosis)
+  // would run into the fixed signature zone, start a fresh page rather
+  // than letting anything overlap — the signature position itself never
+  // changes, only which page it lands on.
+  const sigZoneTop = sigY - sigImgHeight - 4 - 8;
+  if (y > sigZoneTop) {
+    doc.addPage();
+    sigY = pageHeight - 120;
+  }
+
   const rightSigX = pageWidth - margin - sigLineWidth;
 
   // Authorised signatory's signature image, sitting just above its line
