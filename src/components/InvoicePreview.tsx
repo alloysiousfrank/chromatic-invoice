@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { LOGO_BASE64 } from "../assets/logo";
+import { SIGNATURE_BASE64 } from "../assets/signature";
 import { calcAdvance, calcBalanceDue, calcGrandTotal } from "../types";
 import type { InvoiceData } from "../types";
 import { getBrandDisplayLabel } from "../data/brandFields";
@@ -189,7 +190,10 @@ export default function InvoicePreview({ data }: Props) {
 
         <div className="signatures">
           <div className="sig-line">Customer&apos;s Signature</div>
-          <div className="sig-line">Receiver&apos;s Signature</div>
+          <div className="sig-line sig-line-authorised">
+            <img src={SIGNATURE_BASE64} alt="Authorised signatory signature" className="sig-image" />
+            Authorised Signatory
+          </div>
         </div>
 
         <p className="warranty-note">{WARRANTY_NOTE}</p>

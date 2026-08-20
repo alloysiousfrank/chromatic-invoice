@@ -1,6 +1,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { LOGO_BASE64 } from "../assets/logo";
+import { SIGNATURE_BASE64 } from "../assets/signature";
 import { generateUpiQrDataUrl } from "./qrCode";
 import { calcAdvance, calcBalanceDue, calcGrandTotal } from "../types";
 import type { InvoiceData } from "../types";
@@ -277,15 +278,33 @@ export async function buildInvoicePdf(data: InvoiceData): Promise<jsPDF> {
   }
 
   // --- Signatures ---
-  const sigY = Math.max(y + 30, pageHeight - 120);
+  const sigLineWidth = 160;
+  const sigImgWidth = 120;
+  const sigImgHeight = sigImgWidth / 2.49;
+  // Reserve room above the line for the signature image so it never
+  // overlaps whatever content (QR code, charges, etc.) sits above it.
+  const sigY = Math.max(y + 30 + sigImgHeight + 4, pageHeight - 120);
+  const rightSigX = pageWidth - margin - sigLineWidth;
+
+  // Authorised signatory's signature image, sitting just above its line
+  // (native ratio ~2.49:1 — keep it that way so it isn't stretched).
+  doc.addImage(
+    SIGNATURE_BASE64,
+    "PNG",
+    rightSigX + (sigLineWidth - sigImgWidth) / 2,
+    sigY - sigImgHeight - 4,
+    sigImgWidth,
+    sigImgHeight
+  );
+
   doc.setDrawColor(...LINE);
-  doc.line(margin, sigY, margin + 160, sigY);
-  doc.line(pageWidth - margin - 160, sigY, pageWidth - margin, sigY);
+  doc.line(margin, sigY, margin + sigLineWidth, sigY);
+  doc.line(rightSigX, sigY, pageWidth - margin, sigY);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.setTextColor(...INK);
   doc.text("Customer's Signature", margin, sigY + 14);
-  doc.text("Receiver's Signature", pageWidth - margin - 160, sigY + 14);
+  doc.text("Authorised Signatory", rightSigX, sigY + 14);
 
   // --- Footer ---
   doc.setDrawColor(...ACCENT);
