@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { LOGO_BASE64 } from "../assets/logo";
-import { calcGrandTotal } from "../types";
+import { calcAdvance, calcBalanceDue, calcGrandTotal } from "../types";
 import type { InvoiceData } from "../types";
 import { getBrandDisplayLabel } from "../data/brandFields";
 import { downloadInvoicePdf } from "../utils/generateInvoicePdf";
@@ -27,10 +27,14 @@ export default function InvoicePreview({ data }: Props) {
   const grandTotalStr = grandTotal.toFixed(2);
   const partsCost = (parseFloat(service.sparePartsCost || "0") || 0).toFixed(2);
   const serviceChargeStr = (parseFloat(service.serviceCharge || "0") || 0).toFixed(2);
+  const advance = calcAdvance(service);
+  const balanceDue = calcBalanceDue(service);
+  const hasAdvance = advance > 0;
+  const payableStr = (hasAdvance ? balanceDue : grandTotal).toFixed(2);
 
   useEffect(() => {
     let cancelled = false;
-    generateUpiQrDataUrl(grandTotalStr, `${BUSINESS_NAME} - ${customer.name || "Invoice"}`)
+    generateUpiQrDataUrl(payableStr, `${BUSINESS_NAME} - ${customer.name || "Invoice"}`)
       .then((url) => {
         if (!cancelled) setQrDataUrl(url);
       })
@@ -41,7 +45,7 @@ export default function InvoicePreview({ data }: Props) {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [grandTotalStr, customer.name]);
+  }, [payableStr, customer.name]);
 
   const dateStr = service.invoiceDate
     ? new Date(service.invoiceDate).toLocaleDateString("en-GB")
@@ -155,6 +159,18 @@ export default function InvoicePreview({ data }: Props) {
           <span>GRAND TOTAL</span>
           <strong>₹ {grandTotalStr}</strong>
         </div>
+        {hasAdvance && (
+          <>
+            <div className="grand-total-bar advance-bar">
+              <span>ADVANCE PAID</span>
+              <strong>&minus; ₹ {advance.toFixed(2)}</strong>
+            </div>
+            <div className="grand-total-bar balance-bar">
+              <span>BALANCE DUE</span>
+              <strong>₹ {balanceDue.toFixed(2)}</strong>
+            </div>
+          </>
+        )}
 
         <div className="qr-block">
           {qrDataUrl ? (
@@ -163,7 +179,9 @@ export default function InvoicePreview({ data }: Props) {
             <div className="qr-image qr-placeholder">QR</div>
           )}
           <div>
-            <span className="qr-caption qr-caption-strong">Scan to Pay (UPI)</span>
+            <span className="qr-caption qr-caption-strong">
+              Scan to Pay (UPI) &mdash; ₹ {payableStr}
+            </span>
             <br />
             <span className="qr-caption">Any UPI app — GPay, PhonePe, Paytm</span>
           </div>

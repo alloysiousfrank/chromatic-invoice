@@ -188,6 +188,28 @@ textarea {
   color: var(--ink);
 }
 
+.advance-live {
+  margin-top: 8px;
+  background: #fdf3f3;
+  border-color: #d98c8c;
+}
+
+.advance-live span,
+.advance-live strong {
+  color: #a13d3d;
+}
+
+.balance-live {
+  margin-top: 8px;
+  background: #eef7f0;
+  border-color: #6fae7f;
+}
+
+.balance-live span,
+.balance-live strong {
+  color: #29713f;
+}
+
 .btn {
   border: none;
   border-radius: 10px;
@@ -401,6 +423,26 @@ textarea {
 
 .grand-total-bar strong {
   font-size: 1.2rem;
+}
+
+.advance-bar,
+.balance-bar {
+  margin-top: -12px;
+  padding: 9px 16px;
+}
+
+.advance-bar span,
+.advance-bar strong {
+  font-size: 0.85rem;
+}
+
+.advance-bar {
+  background: #a13d3d;
+  margin-bottom: 10px;
+}
+
+.balance-bar {
+  background: #29713f;
 }
 
 .warranty-note {

@@ -1,4 +1,4 @@
-import { calcGrandTotal } from "../types";
+import { calcAdvance, calcBalanceDue, calcGrandTotal } from "../types";
 import type { ServiceDetails } from "../types";
 
 interface Props {
@@ -11,6 +11,9 @@ export default function ServiceDetailsSection({ service, onChange }: Props) {
     onChange({ ...service, [key]: value });
 
   const grandTotal = calcGrandTotal(service);
+  const advance = calcAdvance(service);
+  const balanceDue = calcBalanceDue(service);
+  const hasAdvance = advance > 0;
 
   return (
     <section className="card">
@@ -63,6 +66,18 @@ export default function ServiceDetailsSection({ service, onChange }: Props) {
           />
         </div>
         <div className="field">
+          <label htmlFor="advanceAmount">Advance Paid (₹) &mdash; optional</label>
+          <input
+            id="advanceAmount"
+            type="number"
+            step="0.01"
+            inputMode="decimal"
+            value={service.advanceAmount}
+            onChange={(e) => set("advanceAmount", e.target.value)}
+            placeholder="Leave blank if no advance was paid"
+          />
+        </div>
+        <div className="field">
           <label htmlFor="invDate">Invoice Date</label>
           <input id="invDate" type="date" value={service.invoiceDate} onChange={(e) => set("invoiceDate", e.target.value)} />
         </div>
@@ -72,6 +87,18 @@ export default function ServiceDetailsSection({ service, onChange }: Props) {
         <span>Grand Total</span>
         <strong>₹ {grandTotal.toFixed(2)}</strong>
       </div>
+      {hasAdvance && (
+        <>
+          <div className="grand-total-live advance-live">
+            <span>Advance Paid</span>
+            <strong>&minus; ₹ {advance.toFixed(2)}</strong>
+          </div>
+          <div className="grand-total-live balance-live">
+            <span>Balance Due</span>
+            <strong>₹ {balanceDue.toFixed(2)}</strong>
+          </div>
+        </>
+      )}
     </section>
   );
 }

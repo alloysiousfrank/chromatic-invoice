@@ -2,7 +2,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { LOGO_BASE64 } from "../assets/logo";
 import { generateUpiQrDataUrl } from "./qrCode";
-import { calcGrandTotal } from "../types";
+import { calcAdvance, calcBalanceDue, calcGrandTotal } from "../types";
 import type { InvoiceData } from "../types";
 import { getBrandDisplayLabel } from "../data/brandFields";
 import {
@@ -192,6 +192,10 @@ export async function buildInvoicePdf(data: InvoiceData): Promise<jsPDF> {
   const partsCost = parseFloat(service.sparePartsCost || "0") || 0;
   const serviceCharge = parseFloat(service.serviceCharge || "0") || 0;
   const grandTotal = calcGrandTotal(service);
+  const advance = calcAdvance(service);
+  const balanceDue = calcBalanceDue(service);
+  const hasAdvance = advance > 0;
+  const payableStr = (hasAdvance ? balanceDue : grandTotal).toFixed(2);
 
   autoTable(doc, {
     startY: y,
@@ -222,20 +226,47 @@ export async function buildInvoicePdf(data: InvoiceData): Promise<jsPDF> {
   doc.text("GRAND TOTAL", margin + 14, y + totalBarHeight / 2 + 4);
   doc.text("Rs. " + grandTotal.toFixed(2), pageWidth - margin - 14, y + totalBarHeight / 2 + 4, { align: "right" });
 
-  y += totalBarHeight + 24;
+  y += totalBarHeight + 4;
+
+  // Advance Paid / Balance Due — only shown when an advance was actually recorded.
+  if (hasAdvance) {
+    const smallBarHeight = 26;
+    const ADVANCE_RED: [number, number, number] = [161, 61, 61];
+    const BALANCE_GREEN: [number, number, number] = [41, 113, 63];
+
+    doc.setFillColor(...ADVANCE_RED);
+    doc.rect(margin, y, pageWidth - margin * 2, smallBarHeight, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(...WHITE);
+    doc.text("ADVANCE PAID", margin + 14, y + smallBarHeight / 2 + 3.5);
+    doc.text("- Rs. " + advance.toFixed(2), pageWidth - margin - 14, y + smallBarHeight / 2 + 3.5, { align: "right" });
+    y += smallBarHeight + 4;
+
+    doc.setFillColor(...BALANCE_GREEN);
+    doc.rect(margin, y, pageWidth - margin * 2, totalBarHeight, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.setTextColor(...WHITE);
+    doc.text("BALANCE DUE", margin + 14, y + totalBarHeight / 2 + 4);
+    doc.text("Rs. " + balanceDue.toFixed(2), pageWidth - margin - 14, y + totalBarHeight / 2 + 4, { align: "right" });
+    y += totalBarHeight;
+  }
+
+  y += 24;
 
   // --- QR code ---
   const qrTop = y;
   const qrSize = 68;
   try {
-    const qrDataUrl = await generateUpiQrDataUrl(grandTotal.toFixed(2), `${BUSINESS_NAME} - ${customer.name || "Invoice"}`);
+    const qrDataUrl = await generateUpiQrDataUrl(payableStr, `${BUSINESS_NAME} - ${customer.name || "Invoice"}`);
     doc.setDrawColor(...LINE);
     doc.roundedRect(margin, qrTop, qrSize + 12, qrSize + 12, 4, 4);
     doc.addImage(qrDataUrl, "PNG", margin + 6, qrTop + 6, qrSize, qrSize);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8.5);
     doc.setTextColor(...INK);
-    doc.text("Scan to Pay (UPI)", margin + qrSize + 24, qrTop + 30);
+    doc.text(`Scan to Pay (UPI) - Rs. ${payableStr}`, margin + qrSize + 24, qrTop + 30);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     doc.setTextColor(...SLATE);
