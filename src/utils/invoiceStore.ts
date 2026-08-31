@@ -1,7 +1,8 @@
 import * as XLSX from "xlsx";
 import { apiGet, apiPost } from "./api";
-import { calcGrandTotal } from "../types";
+import { calcAdvance, calcBalanceDue, calcGrandTotal } from "../types";
 import type { InvoiceData, CustomerDetails, ProductDetails, ServiceDetails } from "../types";
+import { getBrandDisplayLabel } from "../data/brandFields";
 
 export interface InvoiceApiRecord {
   _id: string;
@@ -47,7 +48,7 @@ export async function exportRecordsToExcel(): Promise<void> {
     "Invoice Date": r.service.invoiceDate,
     "Customer Name": r.customer.name,
     "Contact No": r.customer.contact,
-    Brand: r.product.brand,
+    Brand: getBrandDisplayLabel(r.product.brand, r.product.customBrandName),
     "Model Number": r.product.modelNumber,
     "Serial Number": r.product.serialNumber,
     "Repair Type": r.product.repairType,
@@ -57,12 +58,15 @@ export async function exportRecordsToExcel(): Promise<void> {
     "Spare Parts Cost (₹)": r.service.sparePartsCost,
     "Service Charge (₹)": r.service.serviceCharge,
     "Grand Total (₹)": calcGrandTotal(r.service).toFixed(2),
+    "Advance Paid (₹)": calcAdvance(r.service).toFixed(2),
+    "Balance Due (₹)": calcBalanceDue(r.service).toFixed(2),
   }));
   const worksheet = XLSX.utils.json_to_sheet(rows);
   worksheet["!cols"] = [
     { wch: 10 }, { wch: 18 }, { wch: 12 }, { wch: 20 }, { wch: 14 },
     { wch: 10 }, { wch: 16 }, { wch: 16 }, { wch: 12 }, { wch: 14 },
     { wch: 30 }, { wch: 26 }, { wch: 16 }, { wch: 16 }, { wch: 14 },
+    { wch: 14 }, { wch: 14 },
   ];
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Invoices");

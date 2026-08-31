@@ -15,6 +15,7 @@ const InvoiceSchema = new mongoose.Schema(
     },
     product: {
       brand: { type: String, default: "" },
+      customBrandName: { type: String, default: "" },
       productCategory: { type: String, default: "" },
       productSubCategory: { type: String, default: "" },
       modelNumber: { type: String, default: "" },
@@ -29,6 +30,7 @@ const InvoiceSchema = new mongoose.Schema(
       sparePartsChanged: { type: String, default: "" },
       sparePartsCost: { type: String, default: "0" },
       serviceCharge: { type: String, default: "0" },
+      advanceAmount: { type: String, default: "0" },
       invoiceDate: { type: String, default: "" },
     },
   },

@@ -1,9 +1,11 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { LOGO_BASE64 } from "../assets/logo";
+import { SIGNATURE_BASE64 } from "../assets/signature";
 import { generateUpiQrDataUrl } from "./qrCode";
-import { calcGrandTotal } from "../types";
+import { calcAdvance, calcBalanceDue, calcGrandTotal } from "../types";
 import type { InvoiceData } from "../types";
+import { getBrandDisplayLabel } from "../data/brandFields";
 import {
   BUSINESS_NAME,
   BUSINESS_TAGLINE,
@@ -114,7 +116,7 @@ export async function buildInvoicePdf(data: InvoiceData): Promise<jsPDF> {
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  y = (doc as any).lastAutoTable.finalY + 22;
+  y = (doc as any).lastAutoTable.finalY + 13;
 
   // --- Product details ---
   doc.setFont("helvetica", "bold");
@@ -132,7 +134,7 @@ export async function buildInvoicePdf(data: InvoiceData): Promise<jsPDF> {
     body: [
       [
         { content: "Brand", styles: { fontStyle: "bold", fillColor: PANEL } },
-        or(product.brand),
+        or(getBrandDisplayLabel(product.brand, product.customBrandName)),
         { content: "Sub-Category", styles: { fontStyle: "bold", fillColor: PANEL } },
         or(product.productSubCategory),
       ],
@@ -157,7 +159,7 @@ export async function buildInvoicePdf(data: InvoiceData): Promise<jsPDF> {
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  y = (doc as any).lastAutoTable.finalY + 22;
+  y = (doc as any).lastAutoTable.finalY + 13;
 
   // --- Condition + diagnosis ---
   doc.setFont("helvetica", "bold");
@@ -179,7 +181,7 @@ export async function buildInvoicePdf(data: InvoiceData): Promise<jsPDF> {
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  y = (doc as any).lastAutoTable.finalY + 22;
+  y = (doc as any).lastAutoTable.finalY + 13;
 
   // --- Charges + Grand Total ---
   doc.setFont("helvetica", "bold");
@@ -191,6 +193,10 @@ export async function buildInvoicePdf(data: InvoiceData): Promise<jsPDF> {
   const partsCost = parseFloat(service.sparePartsCost || "0") || 0;
   const serviceCharge = parseFloat(service.serviceCharge || "0") || 0;
   const grandTotal = calcGrandTotal(service);
+  const advance = calcAdvance(service);
+  const balanceDue = calcBalanceDue(service);
+  const hasAdvance = advance > 0;
+  const payableStr = (hasAdvance ? balanceDue : grandTotal).toFixed(2);
 
   autoTable(doc, {
     startY: y,
@@ -221,39 +227,101 @@ export async function buildInvoicePdf(data: InvoiceData): Promise<jsPDF> {
   doc.text("GRAND TOTAL", margin + 14, y + totalBarHeight / 2 + 4);
   doc.text("Rs. " + grandTotal.toFixed(2), pageWidth - margin - 14, y + totalBarHeight / 2 + 4, { align: "right" });
 
-  y += totalBarHeight + 24;
+  y += totalBarHeight + 4;
+
+  // Advance Paid / Balance Due — only shown when an advance was actually recorded.
+  // Kept compact (smaller bars, tighter gaps) so adding them never pushes
+  // the fixed-position signature block below into overlapping territory.
+  if (hasAdvance) {
+    const smallBarHeight = 22;
+    const balanceBarHeight = 28;
+    const ADVANCE_RED: [number, number, number] = [161, 61, 61];
+    const BALANCE_GREEN: [number, number, number] = [41, 113, 63];
+
+    doc.setFillColor(...ADVANCE_RED);
+    doc.rect(margin, y, pageWidth - margin * 2, smallBarHeight, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9.5);
+    doc.setTextColor(...WHITE);
+    doc.text("ADVANCE PAID", margin + 14, y + smallBarHeight / 2 + 3.5);
+    doc.text("- Rs. " + advance.toFixed(2), pageWidth - margin - 14, y + smallBarHeight / 2 + 3.5, { align: "right" });
+    y += smallBarHeight + 2;
+
+    doc.setFillColor(...BALANCE_GREEN);
+    doc.rect(margin, y, pageWidth - margin * 2, balanceBarHeight, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11.5);
+    doc.setTextColor(...WHITE);
+    doc.text("BALANCE DUE", margin + 14, y + balanceBarHeight / 2 + 4);
+    doc.text("Rs. " + balanceDue.toFixed(2), pageWidth - margin - 14, y + balanceBarHeight / 2 + 4, { align: "right" });
+    y += balanceBarHeight;
+  }
+
+  y += 12;
 
   // --- QR code ---
   const qrTop = y;
   const qrSize = 68;
   try {
-    const qrDataUrl = await generateUpiQrDataUrl(grandTotal.toFixed(2), `${BUSINESS_NAME} - ${customer.name || "Invoice"}`);
+    const qrDataUrl = await generateUpiQrDataUrl(payableStr, `${BUSINESS_NAME} - ${customer.name || "Invoice"}`);
     doc.setDrawColor(...LINE);
     doc.roundedRect(margin, qrTop, qrSize + 12, qrSize + 12, 4, 4);
     doc.addImage(qrDataUrl, "PNG", margin + 6, qrTop + 6, qrSize, qrSize);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8.5);
     doc.setTextColor(...INK);
-    doc.text("Scan to Pay (UPI)", margin + qrSize + 24, qrTop + 30);
+    doc.text(`Scan to Pay (UPI) - Rs. ${payableStr}`, margin + qrSize + 24, qrTop + 30);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     doc.setTextColor(...SLATE);
     doc.text("Any UPI app — GPay, PhonePe, Paytm", margin + qrSize + 24, qrTop + 44);
-    y = qrTop + qrSize + 12 + 20;
+    y = qrTop + qrSize + 12 + 6;
   } catch {
     y += 16;
   }
 
   // --- Signatures ---
-  const sigY = Math.max(y + 30, pageHeight - 120);
+  // Fixed distance from the bottom of the page — identical on every
+  // invoice regardless of how tall the content above it is (with or
+  // without the advance/balance bars). This keeps the signature block,
+  // its lines, and the footer note perfectly consistent across all
+  // invoices instead of drifting based on content length.
+  const sigLineWidth = 160;
+  const sigImgWidth = 120;
+  const sigImgHeight = sigImgWidth / 2.49;
+  let sigY = pageHeight - 120;
+
+  // Safety net: if unusually long content (e.g. a very long diagnosis)
+  // would run into the fixed signature zone, start a fresh page rather
+  // than letting anything overlap — the signature position itself never
+  // changes, only which page it lands on.
+  const sigZoneTop = sigY - sigImgHeight - 4 - 8;
+  if (y > sigZoneTop) {
+    doc.addPage();
+    sigY = pageHeight - 120;
+  }
+
+  const rightSigX = pageWidth - margin - sigLineWidth;
+
+  // Authorised signatory's signature image, sitting just above its line
+  // (native ratio ~2.49:1 — keep it that way so it isn't stretched).
+  doc.addImage(
+    SIGNATURE_BASE64,
+    "PNG",
+    rightSigX + (sigLineWidth - sigImgWidth) / 2,
+    sigY - sigImgHeight - 4,
+    sigImgWidth,
+    sigImgHeight
+  );
+
   doc.setDrawColor(...LINE);
-  doc.line(margin, sigY, margin + 160, sigY);
-  doc.line(pageWidth - margin - 160, sigY, pageWidth - margin, sigY);
+  doc.line(margin, sigY, margin + sigLineWidth, sigY);
+  doc.line(rightSigX, sigY, pageWidth - margin, sigY);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.setTextColor(...INK);
   doc.text("Customer's Signature", margin, sigY + 14);
-  doc.text("Receiver's Signature", pageWidth - margin - 160, sigY + 14);
+  doc.text("Authorised Signatory", rightSigX, sigY + 14);
 
   // --- Footer ---
   doc.setDrawColor(...ACCENT);

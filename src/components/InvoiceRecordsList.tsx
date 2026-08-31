@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { calcGrandTotal } from "../types";
+import { calcGrandTotal, calcBalanceDue } from "../types";
 import type { InvoiceApiRecord } from "../utils/invoiceStore";
 import { toInvoiceData } from "../utils/invoiceStore";
 import { downloadInvoicePdf } from "../utils/generateInvoicePdf";
@@ -40,7 +40,12 @@ export default function InvoiceRecordsList({ records, loading, error }: Props) {
                 <span className="record-number">{r.invoiceNumber}</span>
                 <span className="record-name">{r.customer.name || "—"}</span>
                 <span className="record-phone">{r.customer.contact || "—"}</span>
-                <span className="record-amount">₹ {calcGrandTotal(r.service).toFixed(2)}</span>
+                <span className="record-amount">
+                  ₹ {calcGrandTotal(r.service).toFixed(2)}
+                  {calcBalanceDue(r.service) > 0 && (
+                    <span className="record-balance"> · Balance ₹{calcBalanceDue(r.service).toFixed(2)}</span>
+                  )}
+                </span>
               </div>
               <button
                 className="btn btn-row-download"

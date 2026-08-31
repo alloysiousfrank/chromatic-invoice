@@ -29,7 +29,7 @@ export const KEYBOARD_BRANDS: Record<string, BrandConfig> = {
   },
   other: {
     label: "Other / Not Listed",
-    subCategories: ["Portable Keyboard", "Digital Piano", "Synthesizer", "Other"],
+    subCategories: ["Portable Keyboard", "Digital Piano", "Synthesizer"],
     commonModels: [],
   },
 };
@@ -38,3 +38,15 @@ export const BRAND_OPTIONS = Object.entries(KEYBOARD_BRANDS).map(([value, cfg]) 
   value,
   label: cfg.label,
 }));
+
+/**
+ * Resolves the brand text that should actually be shown on the invoice
+ * preview/PDF. When the admin picked "Other / Not Listed" and typed a
+ * custom brand name, that typed value is used instead of the raw
+ * "other" key or its generic label.
+ */
+export function getBrandDisplayLabel(brand: string, customBrandName: string): string {
+  if (!brand) return "";
+  if (brand === "other") return customBrandName.trim() || "Other / Not Listed";
+  return KEYBOARD_BRANDS[brand]?.label ?? brand;
+}
