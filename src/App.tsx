@@ -1,35 +1,63 @@
-import { useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import PasswordGate from "./components/PasswordGate";
 import CustomerDetailsSection from "./components/CustomerDetailsSection";
 import ProductFieldsSection from "./components/ProductFieldsSection";
 import ServiceDetailsSection from "./components/ServiceDetailsSection";
 import InvoicePreview from "./components/InvoicePreview";
+import InvoiceRecordsList from "./components/InvoiceRecordsList";
 import { emptyCustomer, emptyProduct, emptyService } from "./types";
 import type { InvoiceData } from "./types";
-import { saveInvoiceRecord, exportRecordsToExcel, getAllRecords } from "./utils/invoiceStore";
-import { generateInvoiceNumber } from "./utils/invoiceNumber";
+import { createInvoice, fetchAllInvoices, exportRecordsToExcel, toInvoiceData } from "./utils/invoiceStore";
+import type { InvoiceApiRecord } from "./utils/invoiceStore";
 
 function InvoiceApp() {
   const [customer, setCustomer] = useState(emptyCustomer);
   const [product, setProduct] = useState(emptyProduct);
   const [service, setService] = useState(emptyService);
   const [invoice, setInvoice] = useState<InvoiceData | null>(null);
-  const [recordCount, setRecordCount] = useState(() => getAllRecords().length);
+  const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
 
-  const handleGenerate = () => {
-    const invoiceNumber = generateInvoiceNumber();
-    const finalService = { ...service, invoiceNumber };
-    const data: InvoiceData = { customer, product, service: finalService };
-    setService(finalService);
-    setInvoice(data);
-    saveInvoiceRecord(data);
-    setRecordCount(getAllRecords().length);
-    requestAnimationFrame(() => {
-      document.getElementById("invoice-preview")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
+  const [records, setRecords] = useState<InvoiceApiRecord[]>([]);
+  const [listLoading, setListLoading] = useState(true);
+  const [listError, setListError] = useState<string | null>(null);
+
+  const loadRecords = useCallback(async () => {
+    setListLoading(true);
+    setListError(null);
+    try {
+      const data = await fetchAllInvoices();
+      setRecords(data);
+    } catch (err) {
+      setListError(err instanceof Error ? err.message : "Failed to load invoices.");
+    } finally {
+      setListLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadRecords();
+  }, [loadRecords]);
+
+  const handleGenerate = async () => {
+    setGenerating(true);
+    setGenerateError(null);
+    try {
+      const record = await createInvoice({ customer, product, service });
+      const data = toInvoiceData(record);
+      setInvoice(data);
+      setRecords((prev) => [record, ...prev]);
+      requestAnimationFrame(() => {
+        document.getElementById("invoice-preview")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    } catch (err) {
+      setGenerateError(err instanceof Error ? err.message : "Failed to generate invoice.");
+    } finally {
+      setGenerating(false);
+    }
   };
 
-  const canGenerate = customer.name.trim() !== "" && product.brand !== "";
+  const canGenerate = customer.name.trim() !== "" && product.brand !== "" && !generating;
 
   return (
     <div className="app">
@@ -44,33 +72,30 @@ function InvoiceApp() {
         <ServiceDetailsSection service={service} onChange={setService} />
 
         <button className="btn btn-generate" disabled={!canGenerate} onClick={handleGenerate}>
-          Generate Invoice
+          {generating ? "Generating…" : "Generate Invoice"}
         </button>
-        {!canGenerate && (
+        {!canGenerate && !generating && (
           <p className="hint center">Enter the customer name and select a brand to generate.</p>
         )}
+        {generateError && <p className="gate-error center">{generateError}</p>}
 
         {invoice && <InvoicePreview data={invoice} />}
 
+        <InvoiceRecordsList records={records} loading={listLoading} error={listError} />
+
         <section className="card records-card">
-          <h2>Invoice Records</h2>
-          <p className="hint">
-            {recordCount === 0
-              ? "No invoices saved on this device yet."
-              : `${recordCount} invoice${recordCount === 1 ? "" : "s"} saved on this device.`}
-          </p>
           <button className="btn btn-export" onClick={exportRecordsToExcel}>
             Export All to Excel
           </button>
           <p className="hint">
-            Records are stored in this browser only — they export as an .xlsx file you can
-            keep as your running record book.
+            Every generated invoice is saved to the shared record book — visible from any
+            device — and can be exported as an .xlsx file any time.
           </p>
         </section>
       </main>
 
       <footer className="app-footer">
-        <p>Runs entirely in your browser. Nothing is emailed or sent — download only.</p>
+        <p>Invoices are stored securely on the shared server. PDFs are generated and downloaded only — never emailed automatically.</p>
       </footer>
     </div>
   );
