@@ -7,29 +7,25 @@ const invoiceRoutes = require("./src/routes/invoices");
 
 const app = express();
 
-const allowedOrigin = process.env.ALLOWED_ORIGIN || "*";
-app.use(cors({ origin: allowedOrigin }));
+const allowedOrigins = (process.env.ALLOWED_ORIGIN || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 app.use(
   cors({
     origin(origin, callback) {
-      // Allow requests without Origin header
       if (!origin) {
         return callback(null, true);
       }
 
-      // Allow all if no origins are configured
-      if (allowedOrigins.length === 0) {
-        return callback(null, true);
-      }
-
-      // Allow configured frontend origins
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
 
       return callback(
-        new Error(`CORS blocked for origin: ${origin}`)
+        new Error(`CORS blocked for origin: ${origin}`),
+        false
       );
     },
   })
