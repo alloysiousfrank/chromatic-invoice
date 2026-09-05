@@ -73,22 +73,22 @@ export const emptyService: ServiceDetails = {
 };
 
 /** Grand Total = spare parts cost + service charge. Computed, never stored redundantly. */
-export function calcGrandTotal(service: ServiceDetails): number {
-  const parts = parseFloat(service.sparePartsCost || "0") || 0;
-  const charge = parseFloat(service.serviceCharge || "0") || 0;
+export function calcGrandTotal(service: ServiceDetails | undefined | null): number {
+  const parts = parseFloat(service?.sparePartsCost || "0") || 0;
+  const charge = parseFloat(service?.serviceCharge || "0") || 0;
   return parts + charge;
 }
 
 /** Advance paid by the customer up-front, if any. Defaults to 0 when left blank. */
-export function calcAdvance(service: ServiceDetails): number {
-  return parseFloat(service.advanceAmount || "0") || 0;
+export function calcAdvance(service: ServiceDetails | undefined | null): number {
+  return parseFloat(service?.advanceAmount || "0") || 0;
 }
 
 /**
  * Balance Due = Grand Total - Advance Paid, floored at 0 so an
  * accidental overpayment entry never shows a negative amount owed.
  */
-export function calcBalanceDue(service: ServiceDetails): number {
+export function calcBalanceDue(service: ServiceDetails | undefined | null): number {
   const balance = calcGrandTotal(service) - calcAdvance(service);
   return balance > 0 ? balance : 0;
 }

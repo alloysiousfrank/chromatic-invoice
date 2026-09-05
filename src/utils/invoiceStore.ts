@@ -1,6 +1,7 @@
 import * as XLSX from "xlsx";
 import { apiGet, apiPost } from "./api";
 import { calcAdvance, calcBalanceDue, calcGrandTotal } from "../types";
+import { emptyCustomer, emptyProduct, emptyService } from "../types";
 import type { InvoiceData, CustomerDetails, ProductDetails, ServiceDetails } from "../types";
 import { getBrandDisplayLabel } from "../data/brandFields";
 
@@ -29,9 +30,9 @@ export async function fetchAllInvoices(): Promise<InvoiceApiRecord[]> {
 
 export function toInvoiceData(record: InvoiceApiRecord): InvoiceData {
   return {
-    customer: record.customer,
-    product: record.product,
-    service: { ...record.service, invoiceNumber: record.invoiceNumber },
+    customer: { ...emptyCustomer, ...record.customer },
+    product: { ...emptyProduct, ...record.product },
+    service: { ...emptyService, ...record.service, invoiceNumber: record.invoiceNumber },
   };
 }
 
@@ -43,20 +44,20 @@ export async function exportRecordsToExcel(): Promise<void> {
     return;
   }
   const rows = records.map((r) => ({
-    "Invoice No": r.invoiceNumber,
-    "Saved At": new Date(r.createdAt).toLocaleString("en-GB"),
-    "Invoice Date": r.service.invoiceDate,
-    "Customer Name": r.customer.name,
-    "Contact No": r.customer.contact,
-    Brand: getBrandDisplayLabel(r.product.brand, r.product.customBrandName),
-    "Model Number": r.product.modelNumber,
-    "Serial Number": r.product.serialNumber,
-    "Repair Type": r.product.repairType,
-    "Service Type": r.product.serviceType,
-    "Problem Diagnosed": r.service.problemDiagnosed,
-    "Spare Parts Changed": r.service.sparePartsChanged,
-    "Spare Parts Cost (₹)": r.service.sparePartsCost,
-    "Service Charge (₹)": r.service.serviceCharge,
+    "Invoice No": r.invoiceNumber || "",
+    "Saved At": r.createdAt ? new Date(r.createdAt).toLocaleString("en-GB") : "",
+    "Invoice Date": r.service?.invoiceDate || "",
+    "Customer Name": r.customer?.name || "",
+    "Contact No": r.customer?.contact || "",
+    Brand: getBrandDisplayLabel(r.product?.brand || "", r.product?.customBrandName || ""),
+    "Model Number": r.product?.modelNumber || "",
+    "Serial Number": r.product?.serialNumber || "",
+    "Repair Type": r.product?.repairType || "",
+    "Service Type": r.product?.serviceType || "",
+    "Problem Diagnosed": r.service?.problemDiagnosed || "",
+    "Spare Parts Changed": r.service?.sparePartsChanged || "",
+    "Spare Parts Cost (₹)": r.service?.sparePartsCost || "0",
+    "Service Charge (₹)": r.service?.serviceCharge || "0",
     "Grand Total (₹)": calcGrandTotal(r.service).toFixed(2),
     "Advance Paid (₹)": calcAdvance(r.service).toFixed(2),
     "Balance Due (₹)": calcBalanceDue(r.service).toFixed(2),

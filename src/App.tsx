@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import ErrorBoundary from "./components/ErrorBoundary";
 import PasswordGate from "./components/PasswordGate";
 import CustomerDetailsSection from "./components/CustomerDetailsSection";
 import ProductFieldsSection from "./components/ProductFieldsSection";
@@ -57,6 +58,19 @@ function InvoiceApp() {
     }
   };
 
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await exportRecordsToExcel();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to export invoices.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const canGenerate = customer.name.trim() !== "" && product.brand !== "" && !generating;
 
   return (
@@ -84,8 +98,8 @@ function InvoiceApp() {
         <InvoiceRecordsList records={records} loading={listLoading} error={listError} />
 
         <section className="card records-card">
-          <button className="btn btn-export" onClick={exportRecordsToExcel}>
-            Export All to Excel
+          <button className="btn btn-export" onClick={handleExport} disabled={exporting}>
+            {exporting ? "Exporting…" : "Export All to Excel"}
           </button>
           <p className="hint">
             Every generated invoice is saved to the shared record book — visible from any
@@ -103,8 +117,10 @@ function InvoiceApp() {
 
 export default function App() {
   return (
-    <PasswordGate>
-      <InvoiceApp />
-    </PasswordGate>
+    <ErrorBoundary>
+      <PasswordGate>
+        <InvoiceApp />
+      </PasswordGate>
+    </ErrorBoundary>
   );
 }

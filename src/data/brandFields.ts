@@ -45,8 +45,8 @@ export const BRAND_OPTIONS = Object.entries(KEYBOARD_BRANDS).map(([value, cfg]) 
  * custom brand name, that typed value is used instead of the raw
  * "other" key or its generic label.
  */
-export function getBrandDisplayLabel(brand: string, customBrandName: string): string {
+export function getBrandDisplayLabel(brand: string, customBrandName: string | undefined | null): string {
   if (!brand) return "";
-  if (brand === "other") return customBrandName.trim() || "Other / Not Listed";
+  if (brand === "other") return (customBrandName || "").trim() || "Other / Not Listed";
   return KEYBOARD_BRANDS[brand]?.label ?? brand;
 }
