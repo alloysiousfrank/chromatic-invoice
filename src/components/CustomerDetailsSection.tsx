@@ -1,4 +1,5 @@
 import type { CustomerDetails } from "../types";
+import { isContactPickerSupported, pickPhoneNumber } from "../utils/contactPicker";
 
 interface Props {
   customer: CustomerDetails;
@@ -10,6 +11,17 @@ interface Props {
 export default function CustomerDetailsSection({ customer, onChange, invoiceDate, onInvoiceDateChange }: Props) {
   const set = <K extends keyof CustomerDetails>(key: K, value: CustomerDetails[K]) =>
     onChange({ ...customer, [key]: value });
+
+  const handlePickContact = async () => {
+    if (!isContactPickerSupported()) {
+      alert(
+        "Picking a number from Contacts isn't supported in this browser — this works on Chrome for Android. You can still type the number in directly."
+      );
+      return;
+    }
+    const tel = await pickPhoneNumber();
+    if (tel) set("contact", tel);
+  };
 
   return (
     <section className="card">
@@ -29,7 +41,18 @@ export default function CustomerDetailsSection({ customer, onChange, invoiceDate
         </div>
         <div className="field">
           <label htmlFor="contact">Contact No</label>
-          <input id="contact" value={customer.contact} onChange={(e) => set("contact", e.target.value)} inputMode="tel" />
+          <div className="input-with-icon">
+            <input id="contact" value={customer.contact} onChange={(e) => set("contact", e.target.value)} inputMode="tel" />
+            <button
+              type="button"
+              className="pick-contact-btn"
+              onClick={handlePickContact}
+              title="Pick from Contacts"
+              aria-label="Pick from Contacts"
+            >
+              👤
+            </button>
+          </div>
         </div>
         <div className="field">
           <label htmlFor="email">Email</label>
