@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import { apiGet, apiPost } from "./api";
+import { apiGet, apiPost, apiPut, apiDelete } from "./api";
 import { calcAdvance, calcBalanceDue, calcGrandTotal } from "../types";
 import { emptyCustomer, emptyProduct, emptyService } from "../types";
 import type { InvoiceData, CustomerDetails, ProductDetails, ServiceDetails } from "../types";
@@ -23,9 +23,23 @@ export async function createInvoice(data: InvoiceData): Promise<InvoiceApiRecord
   });
 }
 
+/** Edits an existing invoice in place. The invoice number never changes. */
+export async function updateInvoice(id: string, data: InvoiceData): Promise<InvoiceApiRecord> {
+  return apiPut<InvoiceApiRecord>(`/api/invoices/${id}`, {
+    customer: data.customer,
+    product: data.product,
+    service: data.service,
+  });
+}
+
 /** Fetches every invoice from every device — this is the shared list. */
 export async function fetchAllInvoices(): Promise<InvoiceApiRecord[]> {
   return apiGet<InvoiceApiRecord[]>("/api/invoices");
+}
+
+/** Permanently deletes the invoice — from the shared database, not just this device. */
+export async function deleteInvoice(id: string): Promise<void> {
+  await apiDelete<{ ok: boolean }>(`/api/invoices/${id}`);
 }
 
 export function toInvoiceData(record: InvoiceApiRecord): InvoiceData {

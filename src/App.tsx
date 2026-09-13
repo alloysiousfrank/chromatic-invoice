@@ -8,7 +8,7 @@ import InvoicePreview from "./components/InvoicePreview";
 import InvoiceRecordsList from "./components/InvoiceRecordsList";
 import { emptyCustomer, emptyProduct, emptyService } from "./types";
 import type { InvoiceData } from "./types";
-import { createInvoice, fetchAllInvoices, exportRecordsToExcel, toInvoiceData } from "./utils/invoiceStore";
+import { createInvoice, updateInvoice, fetchAllInvoices, exportRecordsToExcel, toInvoiceData } from "./utils/invoiceStore";
 import type { InvoiceApiRecord } from "./utils/invoiceStore";
 
 function InvoiceApp() {
@@ -18,6 +18,7 @@ function InvoiceApp() {
   const [invoice, setInvoice] = useState<InvoiceData | null>(null);
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const [records, setRecords] = useState<InvoiceApiRecord[]>([]);
   const [listLoading, setListLoading] = useState(true);
@@ -44,17 +45,50 @@ function InvoiceApp() {
     setGenerating(true);
     setGenerateError(null);
     try {
-      const record = await createInvoice({ customer, product, service });
+      const record = editingId
+        ? await updateInvoice(editingId, { customer, product, service })
+        : await createInvoice({ customer, product, service });
       const data = toInvoiceData(record);
       setInvoice(data);
-      setRecords((prev) => [record, ...prev]);
+      setRecords((prev) => (editingId ? prev.map((r) => (r._id === record._id ? record : r)) : [record, ...prev]));
+      setEditingId(null);
       requestAnimationFrame(() => {
         document.getElementById("invoice-preview")?.scrollIntoView({ behavior: "smooth", block: "start" });
       });
     } catch (err) {
-      setGenerateError(err instanceof Error ? err.message : "Failed to generate invoice.");
+      setGenerateError(err instanceof Error ? err.message : "Failed to save invoice.");
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const handleEdit = (record: InvoiceApiRecord) => {
+    const data = toInvoiceData(record);
+    setCustomer(data.customer);
+    setProduct(data.product);
+    setService(data.service);
+    setEditingId(record._id);
+    setInvoice(null);
+    setGenerateError(null);
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setCustomer(emptyCustomer);
+    setProduct(emptyProduct);
+    setService(emptyService);
+    setGenerateError(null);
+  };
+
+  const handleDeleted = (id: string) => {
+    setRecords((prev) => prev.filter((r) => r._id !== id));
+    // If the deleted invoice was the one currently open for editing, back
+    // out of edit mode instead of leaving the form pointed at nothing.
+    if (editingId === id) {
+      handleCancelEdit();
     }
   };
 
@@ -81,6 +115,11 @@ function InvoiceApp() {
       </header>
 
       <main className="app-main">
+        {editingId && (
+          <div className="editing-banner">
+            Editing an existing invoice — its invoice number won't change.
+          </div>
+        )}
         <CustomerDetailsSection
           customer={customer}
           onChange={setCustomer}
@@ -90,9 +129,16 @@ function InvoiceApp() {
         <ProductFieldsSection product={product} onChange={setProduct} />
         <ServiceDetailsSection service={service} onChange={setService} />
 
-        <button className="btn btn-generate" disabled={!canGenerate} onClick={handleGenerate}>
-          {generating ? "Generating…" : "Generate Invoice"}
-        </button>
+        <div className="generate-row">
+          <button className="btn btn-generate" disabled={!canGenerate} onClick={handleGenerate}>
+            {generating ? (editingId ? "Saving…" : "Generating…") : editingId ? "Save Changes" : "Generate Invoice"}
+          </button>
+          {editingId && (
+            <button className="btn btn-cancel-edit" onClick={handleCancelEdit} disabled={generating}>
+              Cancel Edit
+            </button>
+          )}
+        </div>
         {!canGenerate && !generating && (
           <p className="hint center">Enter the customer name and select a brand to generate.</p>
         )}
@@ -100,7 +146,14 @@ function InvoiceApp() {
 
         {invoice && <InvoicePreview data={invoice} />}
 
-        <InvoiceRecordsList records={records} loading={listLoading} error={listError} />
+        <InvoiceRecordsList
+          records={records}
+          loading={listLoading}
+          error={listError}
+          onEdit={handleEdit}
+          onDeleted={handleDeleted}
+          editingId={editingId}
+        />
 
         <section className="card records-card">
           <button className="btn btn-export" onClick={handleExport} disabled={exporting}>
