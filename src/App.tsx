@@ -81,7 +81,12 @@ function InvoiceApp() {
       </header>
 
       <main className="app-main">
-        <CustomerDetailsSection customer={customer} onChange={setCustomer} />
+        <CustomerDetailsSection
+          customer={customer}
+          onChange={setCustomer}
+          invoiceDate={service.invoiceDate}
+          onInvoiceDateChange={(date) => setService({ ...service, invoiceDate: date })}
+        />
         <ProductFieldsSection product={product} onChange={setProduct} />
         <ServiceDetailsSection service={service} onChange={setService} />
 

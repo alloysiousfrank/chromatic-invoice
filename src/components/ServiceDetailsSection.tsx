@@ -77,10 +77,6 @@ export default function ServiceDetailsSection({ service, onChange }: Props) {
             placeholder="Leave blank if no advance was paid"
           />
         </div>
-        <div className="field">
-          <label htmlFor="invDate">Invoice Date</label>
-          <input id="invDate" type="date" value={service.invoiceDate} onChange={(e) => set("invoiceDate", e.target.value)} />
-        </div>
       </div>
 
       <div className="grand-total-live">

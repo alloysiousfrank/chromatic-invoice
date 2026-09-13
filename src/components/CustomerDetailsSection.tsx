@@ -3,9 +3,11 @@ import type { CustomerDetails } from "../types";
 interface Props {
   customer: CustomerDetails;
   onChange: (next: CustomerDetails) => void;
+  invoiceDate: string;
+  onInvoiceDateChange: (next: string) => void;
 }
 
-export default function CustomerDetailsSection({ customer, onChange }: Props) {
+export default function CustomerDetailsSection({ customer, onChange, invoiceDate, onInvoiceDateChange }: Props) {
   const set = <K extends keyof CustomerDetails>(key: K, value: CustomerDetails[K]) =>
     onChange({ ...customer, [key]: value });
 
@@ -16,6 +18,10 @@ export default function CustomerDetailsSection({ customer, onChange }: Props) {
         <div className="field">
           <label htmlFor="custName">Name</label>
           <input id="custName" value={customer.name} onChange={(e) => set("name", e.target.value)} placeholder="Annai Velankani Shine" />
+        </div>
+        <div className="field">
+          <label htmlFor="invDate">Invoice Date</label>
+          <input id="invDate" type="date" value={invoiceDate} onChange={(e) => onInvoiceDateChange(e.target.value)} />
         </div>
         <div className="field">
           <label htmlFor="landline">Landline No</label>
