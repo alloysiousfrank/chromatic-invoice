@@ -46,9 +46,22 @@ export async function buildInvoicePdf(data: InvoiceData): Promise<jsPDF> {
 
   // Logo on a white rounded chip so it stays legible on the dark band.
   const logoChip = 62;
+  const logoPadding = 6;
+  const logoBoxSize = logoChip - logoPadding * 2;
+  // Logo's native aspect ratio (249x152 after recoloring/trimming) — fit it
+  // within the box without stretching it into a square, and center it.
+  const logoAspect = 249 / 152;
+  let logoW = logoBoxSize;
+  let logoH = logoBoxSize / logoAspect;
+  if (logoH > logoBoxSize) {
+    logoH = logoBoxSize;
+    logoW = logoBoxSize * logoAspect;
+  }
+  const logoX = margin + logoPadding + (logoBoxSize - logoW) / 2;
+  const logoY = (headerHeight - logoChip) / 2 + logoPadding + (logoBoxSize - logoH) / 2;
   doc.setFillColor(...WHITE);
   doc.roundedRect(margin, (headerHeight - logoChip) / 2, logoChip, logoChip, 6, 6, "F");
-  doc.addImage(LOGO_BASE64, "JPEG", margin + 6, (headerHeight - logoChip) / 2 + 6, logoChip - 12, logoChip - 12);
+  doc.addImage(LOGO_BASE64, "PNG", logoX, logoY, logoW, logoH);
 
   const textX = margin + logoChip + 16;
   doc.setFont("helvetica", "bold");
